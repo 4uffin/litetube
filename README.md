@@ -20,26 +20,26 @@ I built LiteTube with a focus on efficiency, persistence, and a clean user exper
 
 * **API Key Persistence:** Your YouTube Data API key is securely stored in **LocalStorage** and pre-filled on subsequent visits if the "Remember Key" option is checked. The key is masked for security after initial entry.
 
-* **Persistent Search State:** The last successful search query, current search filters, and the nextPageToken are saved to **LocalStorage** to maintain the application's state across sessions.
+* **Persistent Search State:** The last successful search query, current search filters, and the ```nextPageToken``` are saved to **LocalStorage** to maintain the application's state across sessions.
 
-* **Fully Responsive Layout:** The application adapts fluidly. On desktops ($\>1024$px), it uses a 50/50 split for results and the player. On mobile and smaller screens, it automatically switches to a stacked, column layout.
+* **Fully Responsive Layout:** The application adapts fluidly. On desktops (```$>1024$px```), it uses a 50/50 split for results and the player. On mobile and smaller screens, it automatically switches to a stacked, column layout.
 
 * **Advanced Search Filters:** Filter results by **Sort Order** (Relevance, Date, View Count), **Duration** (Short, Medium, Long), and **Upload Date** (Last Hour, Day, Week, Month, Year).
 
-* **Efficient Data Fetching:** I use asynchronous JavaScript (async/await) and Promise.all() to simultaneously fetch detailed video statistics (views, duration) and channel statistics (subscriber count) after the initial search.
+* **Efficient Data Fetching:** I use asynchronous JavaScript (```async/await```) and ```Promise.all()``` to simultaneously fetch detailed video statistics (views, duration) and channel statistics (subscriber count) after the initial search.
 
 * **Custom Player Error Handling:** I implement the YouTube Iframe Player API to detect and handle playback errors (e.g., embedding disabled by the creator). A custom error overlay displays an "Open on YouTube" fallback button when an error is detected.
 
-* **Load More Pagination:** I implement continuous loading for results using the API's nextPageToken for a seamless "infinite scroll" experience.
+* **Load More Pagination:** I implement continuous loading for results using the API's ```nextPageToken``` for a seamless "infinite scroll" experience.
 
-* **Optimized Rendering:** I employ a **DocumentFragment** to batch multiple DOM insertions when displaying search results, minimizing layout thrashing and improving rendering performance.
+* **Optimized Rendering:** I employ a ```DocumentFragment``` to batch multiple DOM insertions when displaying search results, minimizing layout thrashing and improving rendering performance.
 
 ## **💻 Technology Stack**
 
 | Language/Tool | Purpose |
 | :---- | :---- |
 | **HTML5** | Core structure and semantic markup. |
-| **CSS3** | Minimal in-line styling and a single \<style\> block for layout and responsiveness. |
+| **CSS3** | Minimal in-line styling and a single ```<style>``` block for layout and responsiveness. |
 | **JavaScript (ES6+)** | All application logic, API interaction, state management, and DOM manipulation. |
 | **YouTube Data API v3** | Searching for videos and fetching statistics/details. |
 | **YouTube Iframe Player API** | Handling video playback and detecting embed errors. |

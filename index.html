@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LiteTube: A Lightweight Tube Viewing Experience</title>
+    <!-- FIX: Ensuring consistent box model for correct layout -->
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        /* Apply pointer cursor to all main clickable/interactive elements for better UX */
+        button,
+        select,
+        #remember-key-toggle,
+        ul#results-list li,
+        #open-youtube-button { /* NEW: Added fallback button */
+            cursor: pointer;
+        }
+        
+        /* NEW: Style for the clickable title link */
+        #main-title-link {
+            text-decoration: none; /* Remove underline */
+            color: inherit; /* Inherit the text color */
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- The max-width constraint has been removed here to allow full screen expansion -->
+    <div id="container-wrapper" style="margin: 0 auto; padding: 20px;">
+        <header style="padding-bottom: 10px; margin-bottom: 15px;">
+            <!-- NEW: Wrapped the title text in an <a> tag pointing to the current page -->
+            <h1 style="text-align: center;">
+                <a href="https://duffin.neocities.org/apitube/lite" id="main-title-link" title="Click to reload page">LiteTube</a>
+            </h1>
+            <p style="text-align: center;">A lightweight Tube viewing experience.</p>
+        </header>
+
+        <!-- API Key Configuration Section -->
+        <div id="api-key-config" style="margin-bottom: 15px; padding-top: 10px;">
+            <label for="api-key-input" style="display: block; margin-bottom: 5px; font-weight: bold;">
+                Your YouTube API Key
+            </label>
+            <input type="password" id="api-key-input" placeholder="Enter your YouTube Data API Key"
+                   title="Your required YouTube Data API Key"
+                   style="width: 100%; padding: 8px; margin-bottom: 10px;"
+                   autocomplete="off"
+                   aria-required="true">
+            
+            <!-- API Key Warning Banner (NEW LOCATION) -->
+            <!-- IMPROVED ACCESSIBILITY: Color contrast updated for better readability -->
+            <div id="api-key-warning" style="padding: 5px; margin-bottom: 10px; border: 1px solid #a30000; background-color: #ffe0e0; font-size: 12px; color: #a30000; text-align: center; border-radius: 4px;">
+                WARNING: The script uses a placeholder key. Search requires you to enter a valid YouTube Data API key.
+            </div>
+            
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+                <p style="font-size: 12px; color: #666;">The key is stored only in your browser if remembered.</p>
+                <label for="remember-key-toggle" style="display: flex; align-items: center;">
+                    <input type="checkbox" id="remember-key-toggle">
+                    <span style="margin-left: 5px;">Remember Key</span>
+                </label>
+            </div>
+        </div>
+        <!-- END API Key Configuration Section -->
+
+        <!-- Search Input -->
+        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+            <input type="text" id="search-input" placeholder="Search for videos (e.g., latest tech review)"
+                   title="Enter keywords to search on YouTube"
+                   style="flex-grow: 1; padding: 8px;"
+                   aria-required="true">
+            <button id="search-button" title="Start video search" style="padding: 8px 15px;">
+                Search Videos
+            </button>
+        </div>
+        
+        <!-- Moved API Information Notice - text-align changed to left -->
+        <p style="font-size: 12px; color: #666; margin-bottom: 15px; text-align: left;">
+            Search powered by the official YouTube Data API.
+        </p>
+
+        <!-- Filter Bar -->
+        <!-- IMPROVED ACCESSIBILITY: Added role="region" and aria-label. Changed <label> to <span>. -->
+        <div id="filter-bar" role="region" aria-label="Search Filters" 
+             style="display: none; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; border-bottom: 1px dashed #ccc; padding-bottom: 10px; align-items: center;">
+            <span style="font-weight: bold; flex-shrink: 0;">Filters:</span>
+            
+            <!-- IMPROVED ACCESSIBILITY: Added descriptive title for screen readers -->
+            <select id="order-select" title="Sort search results" style="padding: 5px;">
+                <option value="relevance">Sort by: Relevance</option>
+                <option value="date">Sort by: Upload Date</option>
+                <option value="viewCount">Sort by: View Count</option>
+                <option value="rating">Sort by: Rating (Legacy)</option>
+            </select>
+
+            <!-- IMPROVED ACCESSIBILITY: Added descriptive title for screen readers -->
+            <select id="duration-select" title="Filter by video duration" style="padding: 5px;">
+                <option value="any">Duration: Any</option>
+                <option value="short">Duration: Short</option>
+                <option value="medium">Duration: Medium</option>
+                <option value="long">Duration: Long</option>
+            </select>
+            
+            <!-- IMPROVED ACCESSIBILITY: Added descriptive title for screen readers -->
+            <select id="published-select" title="Filter by upload date" style="padding: 5px;">
+                <option value="any">Upload Date: Any</option>
+                <option value="hour">Last Hour</option>
+                <option value="day">Last 24 Hours</option>
+                <option value="week">Last Week</option>
+                <option value="month">Last Month</option>
+                <option value="year">Last Year</option>
+            </select>
+        </div>
+
+        <!-- MAIN LAYOUT GRID -->
+        <div id="main-content-grid" style="display: flex; flex-direction: column; gap: 20px;">
+
+            <!-- Results Area (50% width on desktop) -->
+            <!-- IMPROVED ACCESSIBILITY: Added role="region" and aria-label for screen reader clarity -->
+            <div id="results-list-container" role="region" aria-label="Search Results List">
+                <h2 style="font-size: 1.5em; margin-bottom: 10px;">Search Results</h2>
+                <!-- Loading Indicator -->
+                <!-- IMPROVED ACCESSIBILITY: Added role="status" and aria-live="polite" for automatic announcement -->
+                <div id="loading-spinner" role="status" aria-live="polite" style="display: none; text-align: center; padding: 20px;">
+                    <p style="font-weight: bold;">Loading...</p>
+                </div>
+
+                <ul id="results-list" style="list-style: none; padding: 0;">
+                    <li style="padding: 10px; border: 1px solid #ccc; margin-bottom: 5px;">
+                        Results will appear here.
+                    </li>
+                </ul>
+
+                <!-- Pagination Control Area -->
+                <div id="pagination-area" style="padding: 10px; text-align: center; display: none;">
+                    <button id="load-more-button" title="Load the next set of search results" style="width: 100%; padding: 8px;">
+                        Load More (5 results)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Video Player (50% width on desktop) -->
+            <div id="video-player-area">
+                <h2 style="font-size: 1.5em; margin-bottom: 10px;">Video Player</h2>
+                
+                <!-- NEW: Player Container now hosts the iframe AND the error message layer -->
+                <div id="video-container" style="position: relative; width: 100%; padding-bottom: 56.25%; height: 0; overflow: hidden; background-color: #000; border: 1px solid #ccc;">
+                    
+                    <!-- The actual iframe for playback -->
+                    <iframe id="video-player"
+                            width="100%" height="100%"
+                            src=""
+                            frameborder="0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                            allowfullscreen
+                            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
+                    </iframe>
+                    
+                    <!-- NEW: Error Message Overlay (Initially Hidden) -->
+                    <div id="player-error-overlay" style="position: absolute; inset: 0; background-color: rgba(0, 0, 0, 0.9); display: none; flex-direction: column; align-items: center; justify-content: center; color: white; text-align: center; padding: 20px;">
+                        <p id="error-message-text" style="font-weight: bold; margin-bottom: 15px; font-size: 1.1em;">
+                            Error: This video cannot be embedded (Error 153).
+                        </p>
+                        <button id="open-youtube-button" style="padding: 10px 20px; background-color: #FF0000; color: white; border: none; border-radius: 4px; font-weight: bold;">
+                            Open on YouTube
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+
+        <!-- Custom Modal for Messages (No alerts) -->
+        <!-- IMPROVED ACCESSIBILITY: Added role="alertdialog" to ensure immediate attention for screen readers -->
+        <div id="message-modal" role="alertdialog" style="position: fixed; inset: 0; background-color: rgba(0, 0, 0, 0.5); display: none; align-items: center; justify-content: center; z-index: 1000;">
+            <div style="background-color: white; padding: 20px; border: 1px solid #333; max-width: 300px; width: 100%;">
+                <h2 style="font-weight: bold; margin-bottom: 10px;">Error</h2>
+                <p id="message-text" style="margin-bottom: 15px;">An unknown error occurred.</p>
+                <button id="close-modal" style="width: 100%; padding: 8px;">
+                    OK
+                </button>
+            </div>
+        </div>
+
+    </div>
+    
+    <!-- SCRIPT TO LOAD YOUTUBE PLAYER API -->
+    <script>
+        // CRITICAL FIX: The YouTube Iframe API is required to listen for errors (like Error 153)
+        // It injects a global function called onYouTubeIframeAPIReady when loaded.
+        var tag = document.createElement('script');
+        tag.src = "https://www.youtube.com/iframe_api";
+        var firstScriptTag = document.getElementsByTagName('script')[0];
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+        
+        // Global references for the player controller
+        window.playerController = null;
+    </script>
+
+
+    <script type="module">
+        // --- CONFIGURATION OBJECT (Refactoring Hardcoded Values) ---
+        const Config = {
+            DEFAULT_API_KEY: "YOUR_YOUTUBE_API_KEY_HERE",
+            SEARCH_BASE_URL: "https://www.googleapis.com/youtube/v3/search",
+            VIDEOS_BASE_URL: "https://www.googleapis.com/youtube/v3/videos",
+            EMBED_BASE_URL: "https://www.youtube.com/embed",
+            WATCH_BASE_URL: "https://www.youtube.com/watch?v=", // NEW: For fallback link
+            MAX_RESULTS: 5,
+            LAST_SEARCH_KEY: 'youtube_last_search_query',
+            API_KEY_LOCAL_STORAGE_KEY: 'youtube_api_key',
+            DEFAULT_VIDEO_ID: "fD30G6H7Y_c" // Set initial video (A well-known embeddable video)
+        };
+        
+        // --- DOM Elements ---
+        const searchInput = document.getElementById('search-input');
+        const searchButton = document.getElementById('search-button');
+        const resultsList = document.getElementById('results-list');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        const videoPlayerIframe = document.getElementById('video-player');
+        const playerErrorOverlay = document.getElementById('player-error-overlay'); // NEW
+        const openYoutubeButton = document.getElementById('open-youtube-button'); // NEW
+        const messageModal = document.getElementById('message-modal');
+        const messageText = document.getElementById('message-text');
+        const closeModalButton = document.getElementById('close-modal');
+        const apiKeyWarning = document.getElementById('api-key-warning');
+        const loadMoreButton = document.getElementById('load-more-button');
+        const paginationArea = document.getElementById('pagination-area');
+        const resultsContainer = document.getElementById('results-list-container');
+        const playerArea = document.getElementById('video-player-area');
+        
+        // --- API Key Elements ---
+        const apiKeyInput = document.getElementById('api-key-input');
+        const rememberKeyToggle = document.getElementById('remember-key-toggle');
+        
+        // --- FILTER ELEMENTS ---
+        const filterBar = document.getElementById('filter-bar');
+        const orderSelect = document.getElementById('order-select');
+        const durationSelect = document.getElementById('duration-select');
+        const publishedSelect = document.getElementById('published-select'); 
+
+        // --- STATE VARIABLES ---
+        let apiKey = Config.DEFAULT_API_KEY; 
+        const maxResults = Config.MAX_RESULTS; 
+        let nextPageToken = null; 
+        let currentSearchQuery = ''; 
+        let currentOrder = orderSelect.value; 
+        let currentDuration = durationSelect.value; 
+        let currentPublishedFilter = publishedSelect.value; 
+        // NEW: Stores the current video ID being played (for the fallback link)
+        let currentVideoId = Config.DEFAULT_VIDEO_ID; 
+
+        
+        // --- NEW CLASS: Manages the YouTube Iframe Player and Errors ---
+        class VideoPlayerController {
+            constructor(iframeElement, errorOverlay, openButton) {
+                this.iframeElement = iframeElement;
+                this.errorOverlay = errorOverlay;
+                this.openButton = openButton;
+                this.youtubePlayer = null;
+                this.isApiReady = false;
+                this.queuedVideoId = null;
+
+                // Bind event handlers
+                this.openButton.addEventListener('click', this.handleOpenYoutube.bind(this));
+            }
+
+            /**
+             * Called globally by the YouTube Iframe API script after loading.
+             * This method is assigned to the global window.onYouTubeIframeAPIReady in the module scope.
+             */
+            onApiReady() {
+                this.isApiReady = true;
+                // Since the iframe element already exists, we initialize the player object here.
+                this.youtubePlayer = new YT.Player(this.iframeElement, {
+                    events: {
+                        'onError': this.onPlayerError.bind(this)
+                    }
+                });
+                
+                // If a video was queued while the API was loading, play it now.
+                if (this.queuedVideoId) {
+                    this.playVideoById(this.queuedVideoId);
+                } else {
+                    // Start with the default video (already set in the iframe src, but we ensure the API knows)
+                    this.playVideoById(Config.DEFAULT_VIDEO_ID);
+                }
+            }
+
+            /**
+             * Handles YouTube Player API errors. Error 150/153 indicates embedding is disabled.
+             * @param {Object} event - The error event object.
+             */
+            onPlayerError(event) {
+                // Error codes: 150 (embed disabled or unplayable), 101 (invalid ID or non-embeddable)
+                // Error 153 is typically a direct consequence of a failed embed attempt.
+                if (event.data === 150 || event.data === 101 || event.data === 153) {
+                    this.showErrorOverlay(
+                        `Error ${event.data}: This video cannot be embedded. The creator has likely disabled playback in third-party sites.`
+                    );
+                } else {
+                    this.showErrorOverlay(`An unexpected player error occurred (Code ${event.data}).`);
+                }
+                console.error(`Youtubeer Error: ${event.data}. Video ID: ${this.currentVideoId}`);
+            }
+
+            /**
+             * Updates the iframe source to play a new video.
+             * @param {string} videoId - The ID of the video to play.
+             */
+            playVideoById(videoId) {
+                this.hideErrorOverlay();
+                currentVideoId = videoId; // Update global state for external link
+
+                if (!this.isApiReady) {
+                    this.queuedVideoId = videoId;
+                    return;
+                }
+
+                // If the API is ready, use the Player object's function to load the video
+                if (this.youtubePlayer && typeof this.youtubePlayer.loadVideoById === 'function') {
+                    // Use loadVideoById for better control and error handling
+                    this.youtubePlayer.loadVideoById({
+                        videoId: videoId,
+                        suggestedQuality: 'large'
+                    });
+                } else {
+                    // Fallback using direct iframe SRC change if API somehow failed initialization
+                    const url = new URL(`${Config.EMBED_BASE_URL}/${videoId}`);
+                    url.searchParams.set('autoplay', '1');
+                    this.iframeElement.src = url.toString();
+                }
+                
+                // Scroll to the player after clicking play on mobile
+                if (window.innerWidth < 1024) {
+                     document.getElementById('video-player-area').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }
+            
+            showErrorOverlay(message) {
+                document.getElementById('error-message-text').textContent = message;
+                this.errorOverlay.style.display = 'flex';
+                this.iframeElement.style.opacity = '0.05'; // Dim the broken iframe
+            }
+
+            hideErrorOverlay() {
+                this.errorOverlay.style.display = 'none';
+                this.iframeElement.style.opacity = '1'; // Restore iframe visibility
+            }
+
+            /**
+             * Opens the current video on youtube.com in a new tab.
+             */
+            handleOpenYoutube() {
+                window.open(Config.WATCH_BASE_URL + currentVideoId, '_blank');
+            }
+        }
+        
+        // --- GLOBAL INITIALIZATION FOR YOUTUBE API ---
+        // This function must be globally accessible for the YouTube API script to call it.
+        window.onYouTubeIframeAPIReady = function() {
+            // Instantiate the controller once the API script is loaded.
+            window.playerController = new VideoPlayerController(
+                videoPlayerIframe, 
+                playerErrorOverlay, 
+                openYoutubeButton
+            );
+            window.playerController.onApiReady();
+        };
+
+        
+        // --- Utility: Number Formatting (Views) ---
+        /**
+         * Formats a large number into a readable string (e.g., 1.2M views).
+         */
+        function formatViews(num) {
+            const count = parseInt(num);
+            if (count >= 1000000000) return (count / 1000000000).toFixed(1).replace(/\.0$/, '') + 'B views';
+            if (count >= 1000000) return (count / 1000000).toFixed(1).replace(/\.0$/, '') + 'M views';
+            if (count >= 1000) return (count / 1000).toFixed(1).replace(/\.0$/, '') + 'K views';
+            return count + ' views';
+        }
+
+        // --- Utility: Subscriber Formatting (NEW) ---
+        /**
+         * Formats a large number into a readable string (e.g., 1.2M subscribers).
+         */
+        function formatSubscribers(num) {
+            const count = parseInt(num);
+            if (isNaN(count)) return 'Subs unavailable';
+            if (count >= 1000000000) return (count / 1000000000).toFixed(1).replace(/\.0$/, '') + 'B subs';
+            if (count >= 1000000) return (count / 1000000).toFixed(1).replace(/\.0$/, '') + 'M subs';
+            if (count >= 1000) return (count / 1000).toFixed(1).replace(/\.0$/, '') + 'K subs';
+            return count.toLocaleString() + ' subs';
+        }
+
+        // --- Utility: Duration Formatting (NEW) ---
+        /**
+         * Converts ISO 8601 duration (e.g., PT1H30M15S) to human readable MM:SS or HH:MM:SS.
+         */
+        function formatDuration(isoDuration) {
+            if (!isoDuration) return 'N/A';
+            // Regex to parse H, M, S components
+            const matches = isoDuration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+            if (!matches) return 'N/A';
+
+            const parts = {
+                H: parseInt(matches[1] || 0),
+                M: parseInt(matches[2] || 0),
+                S: parseInt(matches[3] || 0)
+            };
+
+            const totalSeconds = parts.H * 3600 + parts.M * 60 + parts.S;
+
+            if (totalSeconds === 0) return '0:00';
+
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+
+            let result = '';
+            if (hours > 0) {
+                // If hours exist, format as H:MM:SS
+                result += hours + ':' + minutes.toString().padStart(2, '0') + ':';
+            } else {
+                // Otherwise, format as M:SS (no leading zero on minutes if less than 10)
+                result += minutes + ':';
+            }
+            // Seconds must always be zero-padded
+            result += seconds.toString().padStart(2, '0');
+            
+            return result;
+        }
+
+        // --- Utility: Date Formatting ---
+        /**
+         * Calculates and returns the time difference as a relative string (e.g., "5 days ago").
+         */
+        function timeSince(dateString) {
+            const seconds = Math.floor((new Date() - new Date(dateString)) / 1000);
+            let interval = seconds / 31536000;
+            if (interval > 1) return Math.floor(interval) + " years ago";
+            interval = seconds / 2592000;
+            if (interval > 1) return Math.floor(interval) + " months ago";
+            interval = seconds / 86400;
+            if (interval > 1) return Math.floor(interval) + " days ago";
+            interval = seconds / 3600;
+            if (interval > 1) return Math.floor(interval) + " hours ago";
+            interval = seconds / 60;
+            if (interval > 1) return Math.floor(interval) + " minutes ago";
+            return "just now";
+        }
+        
+        // --- Utility: Get Published After Timestamp ---
+        function getPublishedAfterTimestamp(filterValue) {
+            if (filterValue === 'any') {
+                return null;
+            }
+
+            const now = new Date();
+            let pastDate = new Date(now.getTime());
+
+            switch (filterValue) {
+                case 'hour': pastDate.setTime(now.getTime() - 3600000); break;
+                case 'day': pastDate.setTime(now.getTime() - 86400000); break;
+                case 'week': pastDate.setDate(now.getDate() - 7); break;
+                case 'month': pastDate.setMonth(now.getMonth() - 1); break;
+                case 'year': pastDate.setFullYear(now.getFullYear() - 1); break;
+                default: return null;
+            }
+            return pastDate.toISOString(); 
+        }
+
+        // --- Initialization and Persistence ---
+        
+        const lastQuery = localStorage.getItem(Config.LAST_SEARCH_KEY);
+        if (lastQuery) {
+            searchInput.value = lastQuery;
+        }
+
+        const storedKey = localStorage.getItem(Config.API_KEY_LOCAL_STORAGE_KEY);
+        if (storedKey) {
+            apiKey = storedKey;
+            apiKeyInput.value = storedKey;
+            rememberKeyToggle.checked = true;
+            apiKeyWarning.style.display = 'none';
+        } else if (apiKey === Config.DEFAULT_API_KEY) {
+            apiKeyWarning.style.display = 'block';
+        } else {
+             apiKeyInput.value = apiKey;
+             apiKeyWarning.style.display = 'none';
+        }
+
+
+        // --- Utility Functions ---
+
+        /**
+         * Handles saving/removing the API key in localStorage and updates the global state.
+         */
+        function saveKey() {
+            const key = apiKeyInput.value.trim();
+            apiKey = key || Config.DEFAULT_API_KEY;
+            
+            if (rememberKeyToggle.checked && key && key !== Config.DEFAULT_API_KEY) {
+                localStorage.setItem(Config.API_KEY_LOCAL_STORAGE_KEY, key);
+            } else {
+                localStorage.removeItem(Config.API_KEY_LOCAL_STORAGE_KEY);
+            }
+            
+            // Manage the placeholder warning banner
+            if (key && key !== Config.DEFAULT_API_KEY) {
+                apiKeyWarning.style.display = 'none';
+            } else {
+                apiKeyWarning.style.display = 'block';
+            }
+        }
+        
+        apiKeyInput.addEventListener('input', saveKey);
+        rememberKeyToggle.addEventListener('change', saveKey);
+
+
+        /**
+         * Displays a custom modal message instead of using window.alert()
+         */
+        function showMessage(message) {
+            messageText.textContent = message;
+            messageModal.style.display = 'flex';
+        }
+
+        closeModalButton.addEventListener('click', () => {
+            messageModal.style.display = 'none';
+        });
+        
+        /**
+         * Displays a prominent error message card in the results list.
+         */
+        function displayErrorInResults(message) {
+            resultsList.innerHTML = `
+                <li style="padding: 10px; border: 1px solid red; background-color: #fee; margin-bottom: 5px;">
+                    <strong>API Failure:</strong> ${message}
+                </li>
+            `;
+            paginationArea.style.display = 'none';
+        }
+
+
+        /**
+         * Sets the loading state of the UI.
+         */
+        function setLoading(isLoading, isNewSearch) {
+            searchButton.disabled = isLoading;
+            searchInput.disabled = isLoading;
+            orderSelect.disabled = isLoading && isNewSearch;
+            durationSelect.disabled = isLoading && isNewSearch;
+            publishedSelect.disabled = isLoading && isNewSearch; 
+            apiKeyInput.disabled = isLoading && isNewSearch; 
+            rememberKeyToggle.disabled = isLoading && isNewSearch; 
+            
+            searchButton.textContent = isLoading && isNewSearch ? 'Searching...' : 'Search Videos';
+            
+            if (isLoading) {
+                if (isNewSearch) {
+                    loadingSpinner.style.display = 'block';
+                    resultsList.innerHTML = '';
+                    paginationArea.style.display = 'none';
+                } else {
+                    // Loading more
+                    loadMoreButton.textContent = 'Loading...';
+                    loadMoreButton.disabled = true;
+                }
+            } else {
+                loadingSpinner.style.display = 'none';
+                loadMoreButton.textContent = `Load More (${maxResults} results)`;
+                loadMoreButton.disabled = false;
+            }
+        }
+
+        /**
+         * Plays a YouTube video using the player controller.
+         */
+        function playVideo(videoId) {
+            if (window.playerController) {
+                window.playerController.playVideoById(videoId);
+            } else {
+                 // Fallback if API hasn't loaded yet
+                 const url = new URL(`${Config.EMBED_BASE_URL}/${videoId}`);
+                 url.searchParams.set('autoplay', '1');
+                 videoPlayerIframe.src = url.toString();
+                 // Scroll to the player after clicking play on mobile
+                 if (window.innerWidth < 1024) {
+                      document.getElementById('video-player-area').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                 }
+            }
+        }
+
+        // --- Core Fetch Video Details Logic ---
+        /**
+         * Fetches detailed statistics and content details (like view count and duration) for a list of video IDs.
+         */
+        async function fetchVideoDetails(videoIds, currentKey) {
+            if (videoIds.length === 0) return {};
+
+            const url = new URL(Config.VIDEOS_BASE_URL);
+            // Requesting 'statistics' (for views) and 'contentDetails' (for duration)
+            url.searchParams.set('part', 'statistics,contentDetails'); 
+            url.searchParams.set('id', videoIds.join(','));
+            url.searchParams.set('key', currentKey);
+
+            try {
+                const response = await fetch(url.toString());
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const data = await response.json();
+                
+                // Map the statistics to the video ID for easy lookup
+                const videoDetails = {};
+                data.items.forEach(item => {
+                    videoDetails[item.id] = {
+                        views: item.statistics?.viewCount ? formatViews(parseInt(item.statistics.viewCount)) : 'Views unavailable',
+                        // NEW: Extract and format duration
+                        duration: item.contentDetails?.duration ? formatDuration(item.contentDetails.duration) : 'Duration unavailable',
+                    };
+                });
+                return videoDetails;
+            } catch (error) {
+                console.error("Failed to fetch video statistics:", error);
+                // Return an empty object if details fetching fails
+                return {};
+            }
+        }
+        
+        // --- Core Fetch Channel Details Logic ---
+        /**
+         * Fetches subscriber counts for a list of channel IDs.
+         */
+        async function fetchChannelDetails(channelIds, currentKey) {
+            if (channelIds.length === 0) return {};
+
+            const url = new URL("https://www.googleapis.com/youtube/v3/channels"); // Channels endpoint
+            // Requesting 'statistics' for subscriberCount
+            url.searchParams.set('part', 'statistics'); 
+            url.searchParams.set('id', channelIds.join(','));
+            url.searchParams.set('key', currentKey);
+
+            try {
+                const response = await fetch(url.toString());
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const data = await response.json();
+                
+                // Map the statistics to the channel ID for easy lookup
+                const channelDetails = {};
+                data.items.forEach(item => {
+                    channelDetails[item.id] = {
+                        // NEW: Extract and format subscriber count
+                        subscribers: item.statistics?.subscriberCount ? formatSubscribers(parseInt(item.statistics.subscriberCount)) : 'Subs unavailable',
+                    };
+                });
+                return channelDetails;
+            } catch (error) {
+                console.error("Failed to fetch channel statistics:", error);
+                return {};
+            }
+        }
+
+
+        // --- Core Fetch Logic (YouTube API) ---
+
+        async function fetchSearchResults(query, pageToken = null) {
+            const isNewSearch = !pageToken;
+            
+            const currentKey = apiKeyInput.value.trim() || Config.DEFAULT_API_KEY;
+            
+            if (!query.trim()) {
+                if (isNewSearch) {
+                    resultsList.innerHTML = `<li style="padding: 10px; border: 1px solid #ccc; margin-bottom: 5px; text-align: center;">
+                        Please enter a search query.
+                    </li>`;
+                    paginationArea.style.display = 'none';
+                    filterBar.style.display = 'none';
+                }
+                return;
+            }
+            
+            if (isNewSearch) {
+                localStorage.setItem(Config.LAST_SEARCH_KEY, query);
+                currentSearchQuery = query;
+                nextPageToken = null; 
+            }
+
+            if (currentKey === Config.DEFAULT_API_KEY) {
+                const errorMsg = "Search failed. Please update the 'Your YouTube API Key' input field with a valid key.";
+                showMessage(errorMsg);
+                if (isNewSearch) {
+                    displayErrorInResults(errorMsg);
+                }
+                setLoading(false, isNewSearch);
+                return;
+            }
+
+            setLoading(true, isNewSearch);
+            if (isNewSearch) {
+                 resultsList.innerHTML = `<li style="padding: 10px; border: 1px solid #ccc; margin-bottom: 5px; text-align: center;">Searching YouTube...</li>`;
+            }
+
+            // --- STEP 1: Perform Search Request ---
+            const searchUrl = new URL(Config.SEARCH_BASE_URL);
+            searchUrl.searchParams.set('part', 'snippet');
+            searchUrl.searchParams.set('q', query);
+            searchUrl.searchParams.set('type', 'video');
+            searchUrl.searchParams.set('maxResults', maxResults); 
+            searchUrl.searchParams.set('key', currentKey);
+
+            searchUrl.searchParams.set('order', currentOrder);
+            searchUrl.searchParams.set('videoDuration', currentDuration);
+            
+            const publishedAfterTimestamp = getPublishedAfterTimestamp(currentPublishedFilter);
+            if (publishedAfterTimestamp) {
+                searchUrl.searchParams.set('publishedAfter', publishedAfterTimestamp);
+            }
+            
+            if (pageToken) {
+                searchUrl.searchParams.set('pageToken', pageToken);
+            }
+
+            let searchResponse;
+            const MAX_RETRIES = 5;
+            for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+                try {
+                    const response = await fetch(searchUrl.toString());
+
+                    if (!response.ok) {
+                        let errorMessage = `HTTP error! status: ${response.status}`;
+                        try {
+                            const errorData = await response.json();
+                            errorMessage = errorData.error?.message || errorMessage;
+                        } catch (e) {
+                            // ignore JSON parse failure
+                        }
+                        throw new Error(errorMessage);
+                    }
+
+                    searchResponse = await response.json();
+                    break; 
+
+                } catch (error) {
+                    console.error(`Attempt ${attempt + 1} failed:`, error);
+                    if (attempt < MAX_RETRIES - 1) {
+                        const delay = Math.pow(2, attempt) * 1000;
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                    } else {
+                        const finalErrorMessage = `API search request failed after ${MAX_RETRIES} attempts. Check your network or that your API key is valid and has not exceeded its quota. Details: ${error.message}`;
+                        showMessage(finalErrorMessage);
+                        setLoading(false, isNewSearch);
+                        
+                        if (isNewSearch) {
+                             displayErrorInResults(finalErrorMessage);
+                        }
+                        return;
+                    }
+                }
+            }
+
+            nextPageToken = searchResponse.nextPageToken || null;
+            
+            if (isNewSearch && resultsList.firstChild && resultsList.firstChild.textContent.includes('Searching YouTube')) {
+                resultsList.innerHTML = '';
+            }
+
+            // --- STEP 2: Collect IDs and Fetch Details (Views, Duration, Subs) ---
+            const videoIds = searchResponse.items
+                .map(item => item.id.videoId)
+                .filter(id => id); 
+                
+            // Collect unique channel IDs from the search snippet for subscriber lookups
+            const channelIds = [...new Set(searchResponse.items.map(item => item.snippet.channelId))];
+
+
+            // Fetch details in parallel for efficiency
+            const [videoDetailsMap, channelDetailsMap] = await Promise.all([
+                fetchVideoDetails(videoIds, currentKey),
+                fetchChannelDetails(channelIds, currentKey) 
+            ]);
+
+            const enrichedItems = searchResponse.items.map(item => {
+                const videoId = item.id.videoId;
+                const channelId = item.snippet.channelId; 
+
+                const vDetails = videoDetailsMap[videoId] || {};
+                const cDetails = channelDetailsMap[channelId] || {}; 
+
+                const publishedDate = item.snippet.publishedAt;
+                
+                return {
+                    ...item,
+                    details: {
+                        views: vDetails.views || 'Views unavailable',
+                        duration: vDetails.duration || 'Duration unavailable',
+                        subscribers: cDetails.subscribers || 'Subs unavailable',
+                        uploadDate: publishedDate ? timeSince(publishedDate) : 'Date unavailable',
+                    }
+                };
+            });
+            
+            setLoading(false, isNewSearch);
+            // Pass enriched items to displayResults
+            displayResults(enrichedItems, isNewSearch);
+            
+            filterBar.style.display = 'flex';
+            
+            // CRITICAL: Re-enforce the desktop layout after content insertion
+            applyLayout(); 
+        }
+
+        /**
+         * Renders the video results using a DocumentFragment for optimal performance.
+         */
+        function displayResults(items, isNewSearch = true) {
+            
+            if (isNewSearch) {
+                 resultsList.innerHTML = '';
+            }
+            
+            // Filter to only display video results
+            const videoResults = items.filter(item => item.id.videoId);
+            
+            if (videoResults.length === 0 && isNewSearch) {
+                resultsList.innerHTML = `<li style="padding: 10px; border: 1px solid #ccc; margin-bottom: 5px; text-align: center;">
+                    No videos found with the current filters. Try adjusting your search or filters.
+                </li>`;
+            }
+            
+            // IMPROVEMENT: Use DocumentFragment to batch DOM updates
+            const fragment = document.createDocumentFragment();
+
+            videoResults.forEach((item) => {
+                const videoId = item.id.videoId;
+                const title = item.snippet.title;
+                const channel = item.snippet.channelTitle;
+                const description = item.snippet.description;
+                const thumbnailUrl = item.snippet.thumbnails.default.url; 
+                const fullTitle = item.snippet.title; 
+                
+                // Get the enriched details (views/date/duration/subs)
+                const videoDetails = item.details;
+
+                const li = document.createElement('li');
+                // NOTE: Using 'align-items: flex-start;' to prevent the image and text from stretching 
+                li.style.cssText = 'padding: 10px; border: 1px solid #ccc; margin-bottom: 5px; display: flex; align-items: flex-start; gap: 10px;';
+                // CRITICAL FOR DELEGATION: The video ID is stored on the list item
+                li.setAttribute('data-video-id', videoId);
+                // The entire list item now has the tooltip to indicate it is clickable
+                li.title = `Click to play: ${fullTitle}`;
+
+
+                const descriptionSnippet = description.length > 80 
+                    ? description.substring(0, 77) + '...' 
+                    : description;
+
+                li.innerHTML = `
+                    <!-- Container for thumbnail and duration overlay -->
+                    <div style="position: relative; flex-shrink: 0; width: 96px;"> 
+                        <img src="${thumbnailUrl}" 
+                             alt="Thumbnail for ${title}" 
+                             style="width: 96px; height: 56px; object-fit: cover; border: 1px solid #999;"
+                             onerror="this.onerror=null; this.src='https://placehold.co/96x56/cccccc/000000?text=Video';"
+                        >
+                        <!-- NEW: Duration Overlay -->
+                        <span style="position: absolute; bottom: 4px; right: 4px; background-color: rgba(0, 0, 0, 0.7); color: white; padding: 1px 3px; font-size: 10px; border-radius: 2px; line-height: 1;">
+                            ${videoDetails.duration}
+                        </span>
+                    </div>
+
+                    <div style="flex-grow: 1; min-width: 0;">
+                        <!-- Title has title="${fullTitle}" for full text on hover -->
+                        <p style="font-weight: bold; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${fullTitle}">${title}</p>
+                        
+                        <!-- UPDATED: Statistics Line (Channel, Subs, Views, and Date) -->
+                        <p style="font-size: 10px; color: #666; margin: 2px 0 4px 0;">
+                            ${channel} &bull; ${videoDetails.subscribers} &bull; ${videoDetails.views} &bull; ${videoDetails.uploadDate}
+                        </p>
+                        
+                        <!-- Description snippet has title="${description}" for full text on hover -->
+                        <p title="${description}" style="font-size: 12px; color: #666; margin: 2px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${descriptionSnippet}</p>
+                    </div>
+                `;
+                
+                fragment.appendChild(li);
+            });
+            
+            // Append all new elements at once. This is the performance gain.
+            resultsList.appendChild(fragment);
+
+            if (nextPageToken) {
+                paginationArea.style.display = 'block';
+                loadMoreButton.disabled = false;
+                loadMoreButton.textContent = `Load More (${maxResults} results)`;
+            } else {
+                paginationArea.style.display = 'none';
+                if (resultsList.children.length > 0) {
+                    // Prevent adding 'end message' if the last child is already one (e.g., if loading more results failed)
+                    if (!resultsList.lastChild || !resultsList.lastChild.classList.contains('end-message')) {
+                        const endMessage = document.createElement('li');
+                        endMessage.className = 'end-message';
+                        endMessage.style.cssText = 'padding: 10px; text-align: center; font-size: 12px; color: #999;';
+                        endMessage.textContent = 'You have reached the end of the search results.';
+                        resultsList.appendChild(endMessage);
+                    }
+                }
+            }
+        }
+
+        // --- Event Listeners ---
+        searchButton.addEventListener('click', () => {
+            fetchSearchResults(searchInput.value, null);
+        });
+        
+        loadMoreButton.addEventListener('click', () => {
+            if (currentSearchQuery && nextPageToken) {
+                fetchSearchResults(currentSearchQuery, nextPageToken);
+            }
+        });
+        
+        function handleFilterChange() {
+            if (currentSearchQuery.trim()) {
+                currentOrder = orderSelect.value;
+                currentDuration = durationSelect.value;
+                currentPublishedFilter = publishedSelect.value; 
+                fetchSearchResults(currentSearchQuery, null); 
+            }
+        }
+
+        orderSelect.addEventListener('change', handleFilterChange);
+        durationSelect.addEventListener('change', handleFilterChange);
+        publishedSelect.addEventListener('change', handleFilterChange); 
+
+        // REPLACED: The `keyup` listener with a simple `keypress` listener that checks for 'Enter'.
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                // Prevent form submission if input was inside a <form> (good practice)
+                e.preventDefault(); 
+                fetchSearchResults(searchInput.value, null);
+            }
+        });
+        
+        // **PERFORMANCE FIX:** Event Delegation for resultsList (Play Video)
+        resultsList.addEventListener('click', (e) => {
+            let target = e.target;
+            
+            // Traverse up the DOM to find the parent <li> with the video ID
+            while (target && target !== resultsList) {
+                // Check if the target is an LI and has the data attribute
+                if (target.tagName === 'LI' && target.hasAttribute('data-video-id')) {
+                    const videoId = target.getAttribute('data-video-id');
+                    playVideo(videoId);
+                    return; // Stop processing once the <li> is found and handled
+                }
+                target = target.parentNode;
+            }
+        });
+
+
+        // --- Layout Function ---
+        function applyLayout() {
+            const grid = document.getElementById('main-content-grid');
+            
+            if (window.innerWidth > 1024) {
+                // Desktop 50/50 Fluid Layout
+                grid.style.flexDirection = 'row';
+                grid.style.gap = '20px';
+                
+                // 1. Search Results: 50% width
+                resultsContainer.style.flex = `1 1 50%`; 
+                // min-width: 0 prevents content from forcing it wider
+                resultsContainer.style.minWidth = '0';
+                
+                // 2. Video Player: 50% width
+                playerArea.style.flex = '1 1 50%'; 
+                playerArea.style.minWidth = '0'; 
+                
+            } else {
+                // Mobile stacked (column) - the HTML order is respected
+                grid.style.flexDirection = 'column';
+                
+                // Reset desktop styles
+                resultsContainer.style.flex = '0 0 auto';
+                resultsContainer.style.minWidth = 'auto';
+                playerArea.style.flex = '0 0 auto';
+                playerArea.style.minWidth = 'auto';
+            }
+        }
+
+        // Apply on load and resize
+        window.addEventListener('load', () => {
+            applyLayout();
+            // Focus the search input field automatically on page load
+            searchInput.focus(); 
+        });
+        window.addEventListener('resize', applyLayout);
+
+    </script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 >[!WARNING]
 >
-> To avoid major frustration from Google and the YouTube Team, this project requires **You** to supply your own API key for access to YouTube related data and information.
+> To avoid major frustration from Google and the YouTube Team, this project requires **You** to supply your own API key for access to YouTube related data and information. For more information, click [here](https://github.com/4uffin/litetube/tree/main?tab=readme-ov-file#%EF%B8%8F-setup-and-usage).
 
 # **LiteTube: A Lightweight Tube Viewing Experience**
 

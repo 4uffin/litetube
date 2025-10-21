@@ -1,3 +1,7 @@
+>[!WARNING]
+>
+> To avoid major frustration from Google and the YouTube Team, this project requires **You** to supply your own API key for access to YouTube related data and information.
+
 # **LiteTube: A Lightweight Tube Viewing Experience**
 
 > A lightweight Tube viewing experience.

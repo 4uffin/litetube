@@ -8,7 +8,7 @@ It's an excellent example of a **LocalStorage-based web app** that utilizes the 
 
 ## **📜 License**
 
-This project is licensed under the **MIT License**. See the LICENSE here.
+This project is licensed under the **MIT License**. See the [LICENSE](LICENSE).
 
 ## **🚀 Features**
 
